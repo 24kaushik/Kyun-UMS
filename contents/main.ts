@@ -1,3 +1,4 @@
+/// <reference types="chrome" />
 import type { PlasmoCSConfig } from "plasmo"
 import { createWorker } from "tesseract.js"
 
@@ -9,10 +10,13 @@ const CAPTCHA_SELECTOR = "#imgPhoto"
 const INPUT_SELECTOR = "#captcha"
 const EMPTY_CAPTCHA =
   "https://qums.quantumuniversity.edu.in/img/whitey.jpg"
+const STORAGE_KEY = "extensionEnabled"
 
 let worker: any = null
-
-console.log("Content script loaded")
+let observer: MutationObserver | null = null
+let intervalId: number | null = null
+let isEnabled = true
+const storage = chrome?.storage?.local
 
 async function initWorker() {
   if (worker) return worker
@@ -78,13 +82,15 @@ async function preprocessBase64Image(
 async function handleCaptcha(
   img: HTMLImageElement
 ) {
+  if (!(await refreshEnabledState())) {
+    return
+  }
+
   const src = img.src
 
   if (!src || src === EMPTY_CAPTCHA) {
     return
   }
-
-  console.log(src.slice(0, 100))
 
   const isBase64 =
     src.startsWith("data:image/") ||
@@ -95,8 +101,6 @@ async function handleCaptcha(
   if (!isBase64) {
     return
   }
-
-  console.log("Captcha detected")
 
   const enhancedImage =
     await preprocessBase64Image(src)
@@ -112,8 +116,6 @@ async function handleCaptcha(
   const text =
     result.data.text.trim()
 
-  console.log("OCR:", text)
-
   const input = document.querySelector(
     INPUT_SELECTOR
   ) as HTMLInputElement | null
@@ -124,32 +126,29 @@ async function handleCaptcha(
 }
 
 async function setupObserver() {
+  if (!(await refreshEnabledState())) {
+    return false
+  }
+
+  if (observer) {
+    return true
+  }
+
   const img = document.querySelector(
     CAPTCHA_SELECTOR
   ) as HTMLImageElement | null
 
   if (!img) {
-    console.log(
-      "Captcha image not found yet"
-    )
     return false
   }
-
-  console.log(
-    "Captcha image element found"
-  )
 
   if (img.src) {
     await handleCaptcha(img)
   }
 
-  const observer = new MutationObserver(
-    async () => {
-      console.log("Captcha changed")
-
-      await handleCaptcha(img)
-    }
-  )
+  observer = new MutationObserver(async () => {
+    await handleCaptcha(img)
+  })
 
   observer.observe(img, {
     attributes: true,
@@ -159,15 +158,93 @@ async function setupObserver() {
   return true
 }
 
-if (location.pathname === "/") {
+function stopObserver() {
+  if (observer) {
+    observer.disconnect()
+    observer = null
+  }
 
-  const interval = setInterval(async () => {
+  if (intervalId) {
+    clearInterval(intervalId)
+    intervalId = null
+  }
+}
+
+async function startObserver() {
+  if (intervalId || observer) {
+    return
+  }
+
+  intervalId = window.setInterval(async () => {
+    if (!isEnabled) {
+      return
+    }
 
     const success = await setupObserver()
 
-    if (success) {
-      clearInterval(interval)
+    if (success && intervalId) {
+      clearInterval(intervalId)
+      intervalId = null
+    }
+  }, 1000)
+}
+
+async function readEnabledState(): Promise<boolean> {
+  if (!storage) {
+    return true
+  }
+
+  const stored = await new Promise<Record<string, boolean | undefined>>(
+    (resolve) => {
+      storage.get(STORAGE_KEY, (result) => resolve(result))
+    }
+  )
+  return stored[STORAGE_KEY] ?? true
+}
+
+async function refreshEnabledState(): Promise<boolean> {
+  const value = await readEnabledState()
+  isEnabled = value
+  return value
+}
+
+if (location.pathname === "/") {
+  readEnabledState().then((value) => {
+    isEnabled = value
+    if (isEnabled) {
+      startObserver()
+    }
+  })
+
+  chrome?.storage?.onChanged?.addListener((changes, areaName) => {
+    if (areaName && areaName !== "local") {
+      return
     }
 
-  }, 1000)
+    if (!(STORAGE_KEY in changes)) {
+      return
+    }
+
+    isEnabled = changes[STORAGE_KEY].newValue ?? true
+
+    if (isEnabled) {
+      startObserver()
+    } else {
+      stopObserver()
+    }
+  })
+
+  chrome?.runtime?.onMessage?.addListener((message) => {
+    if (message?.type !== "setEnabled") {
+      return
+    }
+
+    isEnabled = Boolean(message.enabled)
+
+    if (isEnabled) {
+      startObserver()
+    } else {
+      stopObserver()
+    }
+  })
 }

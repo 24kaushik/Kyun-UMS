@@ -1,33 +1,93 @@
-This is a [Plasmo extension](https://docs.plasmo.com/) project bootstrapped with [`plasmo init`](https://www.npmjs.com/package/plasmo).
+# Kyun-UMS
 
-## Getting Started
+Kyun-UMS is a Chrome extension that reads the captcha on QUMS and fills it in for you.
 
-First, run the development server:
+## Why it exists
+
+Filling in captchas was so annoying. We students open the ERP like 20 times a day and filling the captcha wrong just makes me too much frustrated. So I built this extension Kyun-UMS for QUMS. Because filling captchas should be easier. Security of the website, protections from bots? Bro what is a bot even gonna do logging into this ancient ERP where anything barely works and you have to see 2 error alerts just after login. Crashes just before assignments etc. Ain't no bot who wants to crack the captcha to get into this website 😭. That's why the name Kyun-UMS.
+
+## Features
+
+- Auto-detects the QUMS captcha image.
+- Runs OCR in the browser.
+- Fills the captcha input automatically.
+- One-click on/off toggle in the popup.
+
+## Requirements
+
+- Google Chrome (or any Chromium-based browser).
+- Node.js and pnpm to build the extension locally.
+
+## Install (build from source)
+
+1. Install dependencies:
+
+   ```bash
+   pnpm install
+   ```
+
+2. Build the extension:
+
+   ```bash
+   pnpm build
+   ```
+
+3. Open Chrome and go to `chrome://extensions`.
+4. Turn on **Developer mode** (top right).
+5. Click **Load unpacked**.
+6. Select the build output folder: `build/chrome-mv3-prod`.
+7. Pin the extension if you want quick access.
+
+## Use it
+
+1. Open the QUMS login page.
+2. Click the extension icon.
+3. Press **Turn On** to enable autofill.
+4. The captcha field will be filled when the image appears.
+
+You can turn it off any time using the same button.
+
+## How it works
+
+- The extension runs only on `https://qums.quantumuniversity.edu.in/`.
+- It watches the captcha image for changes.
+- When a new captcha appears, it converts it to a higher-contrast image and runs OCR.
+- The recognized text is placed into the captcha input field.
+
+## Privacy
+
+- Everything runs locally in your browser.
+- No captcha data is sent to any server.
+
+## Troubleshooting
+
+- If nothing happens, refresh the page and toggle **Turn On** again.
+- If the captcha is wrong, reload the captcha image and try again.
+- After updates, go to `chrome://extensions` and click **Reload** on the extension.
+
+## Development
+
+Start the dev build with hot reload:
 
 ```bash
 pnpm dev
-# or
-npm run dev
 ```
 
-Open your browser and load the appropriate development build. For example, if you are developing for the chrome browser, using manifest v3, use: `build/chrome-mv3-dev`.
+Load the dev build from `build/chrome-mv3-dev` in `chrome://extensions`.
 
-You can start editing the popup by modifying `popup.tsx`. It should auto-update as you make changes. To add an options page, simply add a `options.tsx` file to the root of the project, with a react component default exported. Likewise to add a content page, add a `content.ts` file to the root of the project, importing some module and do some logic, then reload the extension on your browser.
+## Contributing
 
-For further guidance, [visit our Documentation](https://docs.plasmo.com/)
+Contributions are welcome. If you want to improve the OCR, UI, or stability:
 
-## Making production build
+1. Fork the repo.
+2. Create a feature branch.
+3. Make your changes.
+4. Open a pull request with a clear description and screenshots when relevant.
 
-Run the following:
+## License
 
-```bash
-pnpm build
-# or
-npm run build
-```
+See [LICENSE](LICENSE).
 
-This should create a production bundle for your extension, ready to be zipped and published to the stores.
+---
 
-## Submit to the webstores
-
-The easiest way to deploy your Plasmo extension is to use the built-in [bpp](https://bpp.browser.market) GitHub action. Prior to using this action however, make sure to build your extension and upload the first version to the store to establish the basic credentials. Then, simply follow [this setup instruction](https://docs.plasmo.com/framework/workflows/submit) and you should be on your way for automated submission!
+<p align="center">Made with love and frustration by Kaushik Sarkar ❤️</p>
